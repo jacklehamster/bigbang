@@ -1,0 +1,259 @@
+<html>
+<head>
+<meta name="google" value="notranslate"/>
+<meta charset="UTF-8"/>
+<meta http-equiv="Content-Type" content="text/html;charset=ISO-8859-1"/> 
+<meta name="apple-mobile-web-app-capable" content="yes" /> 
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="viewport" content="user-scalable=no,width=device-width, initial-scale=1.0,minimum-scale=1.0"/>
+<meta name="theme-color" content="#000000" />
+<style>
+html, body {
+  overflow-x: hidden; overflow-y: auto;
+  margin: 0px;
+  padding: 0px;
+}
+body {
+  position: fixed;
+left: 0;pa
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+*.unselectable {
+   -moz-user-select: -moz-none;
+   -khtml-user-select: none;
+   -webkit-user-select: none;
+   -ms-user-select: none;
+   user-select: none;
+}
+</style>
+
+
+
+<script language='javascript'>
+   document.addEventListener("DOMContentLoaded", initialize);
+   function initialize() {
+      var canvas = getCanvas();
+      resize();
+      window.addEventListener("resize", resize);
+   }   
+   function getCanvas() {
+      return document.getElementById('canvas');
+   }
+   function resize() {
+      var scale = window.devicePixelRatio;
+      var canvas = getCanvas();
+      var w = window.innerWidth;
+      var h = window.innerHeight;
+      canvas.width = w*scale;
+      canvas.height = h*scale;
+      canvas.style.width = w+'px';
+      canvas.style.height = h+'px';
+   }
+</script>
+</head>
+<body bgcolor='black'>
+<canvas id=canvas></canvas>
+</body>
+</html>
+
+
+
+<script>
+var myplanet = 0;
+
+var num_planets = 1000;
+
+var backslash = String.fromCharCode(92);
+var match = location.hash.match(backslash + 'bstars=(' + backslash + 'd+)');
+if (match) {
+  num_planets = parseInt(match[match.length-1]);
+}
+
+
+var planets = [];
+var init = 1;
+planets.push({x:0,y:0,z:0,dx:0,dy:0,dz:0,color:'#FFFFFF',index:0});
+
+for(var i=0;i<num_planets/2;i++) {
+    var rad = Math.random()*2*Math.PI;
+    var rad2 = Math.random()*2*Math.PI;
+    var color = '#'+parseInt(256*256*256*(2-rad*rad2)).toString(16).substr(1);
+
+    var planet = {x:0,y:0,z:0,dx:0,dy:0,dz:0,color:'#000000',index:i*2+1};
+    planet.z = Math.cos(rad2) * init;
+    planet.x = Math.cos(rad)*planet.z * init;
+    planet.y = Math.sin(rad)*planet.z * init;
+    planet.color = color;
+    planets.push(planet);
+
+    var planet = {x:0,y:0,z:0,dx:0,dy:0,dz:0,color:'#000000',index:i*2+2};
+    planet.z = Math.cos(rad2) * -init;
+    planet.x = Math.cos(rad)*-planet.z * -init;
+    planet.y = Math.sin(rad)*-planet.z * -init;
+    planet.color = color;
+    planets.push(planet);
+}
+
+function draw() {
+   var canvas=document.getElementById('canvas');
+   var context=canvas.getContext('2d');
+   context.clearRect(0,0,canvas.width,canvas.height);
+   
+   var planetsToDraw = [];
+   var magic1 = .2;
+   var magic2 = 100;
+   var antifocus = (1-focusor);
+   for(var i=0;i<planets.length;i++) {
+      var planet=planets[i];
+      var z = planet.z + (focusor*(-planets[myplanet].z+5 + earthShiftZ/100) + antifocus*shiftZ/100);
+      if(z > 0) {
+         var scale = z/magic1;
+         if(scale>.1) {
+           var x = (planet.x + focusor*-planets[myplanet].x) * scale*magic2 + canvas.width/2;
+           var y = (planet.y + focusor*-planets[myplanet].y) * scale*magic2 + canvas.height/2;
+           if((x+scale >0 && x-scale<canvas.width) && (y+scale>0 && y-scale<canvas.height)) {
+              planetsToDraw.push(planet);
+           }
+         }
+      }
+   }
+
+   planetsToDraw.sort(planetSort);
+
+   for(var i=0;i<planetsToDraw.length;i++) {
+      var planet=planetsToDraw[i];
+      
+      var z = planet.z + (focusor*(-planets[myplanet].z+5 + earthShiftZ/100) + antifocus*shiftZ/100);
+      var scale = z/magic1;
+      var x = (planet.x + focusor*-planets[myplanet].x) * scale*magic2 + canvas.width/2;
+      var y = (planet.y + focusor*-planets[myplanet].y) * scale*magic2 + canvas.height/2;
+      if(planet.index!=myplanet) {
+         context.fillStyle=planet.color;
+         context.beginPath();
+         context.arc(x,y,scale,0,2*Math.PI);
+         context.fill();
+      } else {
+         context.drawImage(img,x-scale,y-scale,scale*2,scale*2);
+      }
+   }
+}
+
+var img = new Image;
+img.src = 'https://upload.wikimedia.org/wikipedia/commons/2/22/Earth_Western_Hemisphere_transparent_background.png';
+
+function planetSort(a,b) {
+   return a.z < b.z ? -1 : a.z > b.z ? 1 : 0;
+}
+
+var minDistSq = .000001;
+var ind = 0;
+function refresh() {
+   for(var i=0;i<planets.length;i++) {
+      var planet=planets[i];
+     for(var pair=0;pair<planets.length;pair++) {
+      if(pair==i) continue;
+      var p2 = planets[pair];
+      var dx = (p2.x-planet.x)*100;
+      var dy = (p2.y-planet.y)*100;
+      var dz = (p2.z-planet.z)*100;
+      var distSq = dx*dx + dy*dy + dz*dz;
+      if (distSq < minDistSq) {
+        continue;
+      }
+      var dist = Math.sqrt(distSq);
+      var F = 1/distSq * .01;
+      planet.dx += ( dx / dist ) * F;
+      planet.dy += ( dy / dist ) * F;
+      planet.dz += ( dz / dist ) * F;
+      
+      planet.x += planet.dx / 1000;
+      planet.y += planet.dy / 1000;
+      planet.z += planet.dz / 1000;
+     }
+      
+   }
+   
+   shiftDZ *= .7;
+   if(!toggle) {
+     shiftZ += shiftDZ;//*= Math.pow(1.01,shiftDZ/10);
+   } else {
+     earthShiftZ += shiftDZ; 
+   }
+
+   focusor += (toggle - focusor)/3;
+}
+
+var lastDraw = 0;
+function cycle() {
+    refresh();
+    var now = Date.now();
+    if (now - lastDraw > 50) {
+       draw();
+    }
+    requestAnimationFrame(cycle);
+}
+
+cycle();
+
+
+
+var shiftZ = -50;
+var shiftDZ = 0;
+var earthShiftZ = 0;
+document.addEventListener("wheel",
+   function (e) {
+      shiftDZ -= e.deltaY/10;
+   }
+);
+
+var toggle = 0;
+var focusor = toggle;
+document.addEventListener("mousedown",
+   function(e) {
+     toggle = 1-toggle;
+     if(toggle) {
+        if(!myplanet) {
+           var minDist = planets[0].x*planets[0].x + 
+                         planets[0].y*planets[0].y +
+                         planets[0].z*planets[0].z;
+           for(var i=1;i<planets.length;i++) {
+              var dist = planets[i].x*planets[i].x + 
+                         planets[i].y*planets[i].y +
+                         planets[i].z*planets[i].z;
+              if(dist<minDist) {
+                 minDist = dist;
+                 myplanet = i;
+              }
+           }
+        }
+
+
+        earthShiftZ = 0;
+     };
+   }, {passive: true}
+);
+
+var preTouch;
+function onTouch(e) {
+   var touches = e.touches;
+   var touchY = touches[0].pageY;
+   if(e.type == 'touchmove') {
+       var dY = touchY - preTouch;
+       shiftDZ += dY/10;
+   }
+   preTouch = touchY;
+}
+
+document.addEventListener('touchmove', onTouch);
+document.addEventListener('touchstart', onTouch);
+
+window.addEventListener('hashchange',
+   function(e) {
+      location.reload();
+   });
+
+console.log(num_planets + ' stars');
+</script>
